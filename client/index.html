@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drive Game - Multiplayer 3D Driving</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="hud">
+            <div id="player-count">Players: 1</div>
+            <div id="speed">Speed: 0 km/h</div>
+        </div>
+        <div id="start-screen">
+            <h1>Drive Game</h1>
+            <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+            <button id="start-btn">Start Driving</button>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

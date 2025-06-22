@@ -45,7 +45,8 @@ const gameState = {
         forward: false,
         backward: false,
         left: false,
-        right: false
+        right: false,
+        brake: false
     },
     
     // Touch controls
@@ -120,6 +121,7 @@ function onKeyDown(event) {
     gameState.input.backward = gameState.keys['ArrowDown'] || gameState.keys['KeyS'] || false;
     gameState.input.left = gameState.keys['ArrowLeft'] || gameState.keys['KeyA'] || false;
     gameState.input.right = gameState.keys['ArrowRight'] || gameState.keys['KeyD'] || false;
+    gameState.input.brake = gameState.keys['Space'] || false;
     
     // Toggle debug panel with F3
     if (event.code === 'F3') {
@@ -145,6 +147,7 @@ function onKeyUp(event) {
     gameState.input.backward = gameState.keys['ArrowDown'] || gameState.keys['KeyS'] || false;
     gameState.input.left = gameState.keys['ArrowLeft'] || gameState.keys['KeyA'] || false;
     gameState.input.right = gameState.keys['ArrowRight'] || gameState.keys['KeyD'] || false;
+    gameState.input.brake = gameState.keys['Space'] || false;
 }
 
 // Update input state and send to server
@@ -153,7 +156,8 @@ function updateInputState() {
         forward: gameState.keys['KeyW'] || gameState.keys['ArrowUp'],
         backward: gameState.keys['KeyS'] || gameState.keys['ArrowDown'],
         left: gameState.keys['KeyA'] || gameState.keys['ArrowLeft'],
-        right: gameState.keys['KeyD'] || gameState.keys['ArrowRight']
+        right: gameState.keys['KeyD'] || gameState.keys['ArrowRight'],
+        brake: gameState.keys['Space'] || false
     };
     
     // Only send if input changed
@@ -406,8 +410,9 @@ function initThree() {
     directionalLight.castShadow = true;
     gameState.scene.add(directionalLight);
     
-    // Create ground
-    const groundGeometry = new THREE.PlaneGeometry(100, 100);
+    // Create ground (restore original size)
+    const GROUND_SIZE = 100; // Restored from 500
+    const groundGeometry = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE);
     const groundMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x3a5f0b,
         side: THREE.DoubleSide 
@@ -416,6 +421,31 @@ function initThree() {
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     gameState.scene.add(ground);
+    gameState.groundSize = GROUND_SIZE;
+    
+    // Add invisible boundaries (walls)
+    const wallThickness = 1;
+    const wallHeight = 5;
+    const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0 });
+    // Left wall
+    const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, GROUND_SIZE), wallMaterial);
+    wallLeft.position.set(-GROUND_SIZE/2, wallHeight/2, 0);
+    gameState.scene.add(wallLeft);
+    // Right wall
+    const wallRight = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, GROUND_SIZE), wallMaterial);
+    wallRight.position.set(GROUND_SIZE/2, wallHeight/2, 0);
+    gameState.scene.add(wallRight);
+    // Top wall
+    const wallTop = new THREE.Mesh(new THREE.BoxGeometry(GROUND_SIZE, wallHeight, wallThickness), wallMaterial);
+    wallTop.position.set(0, wallHeight/2, -GROUND_SIZE/2);
+    gameState.scene.add(wallTop);
+    // Bottom wall
+    const wallBottom = new THREE.Mesh(new THREE.BoxGeometry(GROUND_SIZE, wallHeight, wallThickness), wallMaterial);
+    wallBottom.position.set(0, wallHeight/2, GROUND_SIZE/2);
+    gameState.scene.add(wallBottom);
+    
+    // Store boundaries for collision
+    gameState.boundary = GROUND_SIZE / 2 - 2; // 2 units margin
     
     // Create a simple car
     createCar();
@@ -871,57 +901,61 @@ function updateLocalPlayer(deltaTime) {
     let moved = false;
     
     // Update input state based on keys
-    input.forward = gameState.keys['ArrowUp'] || gameState.keys['KeyW'] || false;
-    input.backward = gameState.keys['ArrowDown'] || gameState.keys['KeyS'] || false;
-    input.left = gameState.keys['ArrowLeft'] || gameState.keys['KeyA'] || false;
-    input.right = gameState.keys['ArrowRight'] || gameState.keys['KeyD'] || false;
+    input.forward = gameState.keys['KeyW'] || false;
+    input.backward = gameState.keys['KeyS'] || false;
+    input.left = gameState.keys['KeyA'] || false;
+    input.right = gameState.keys['KeyD'] || false;
+    input.brake = gameState.keys['Space'] || false;
     
     // Apply forces based on input
     if (input.forward) {
-        gameState.velocity.z -= Math.cos(car.rotation.y) * CONSTANTS.ACCELERATION * deltaTime;
-        gameState.velocity.x -= Math.sin(car.rotation.y) * CONSTANTS.ACCELERATION * deltaTime;
+        gameState.velocity.x += Math.sin(car.rotation.y) * CONSTANTS.ACCELERATION * deltaTime;
+        gameState.velocity.z += Math.cos(car.rotation.y) * CONSTANTS.ACCELERATION * deltaTime;
         moved = true;
     }
-    
     if (input.backward) {
-        gameState.velocity.z += Math.cos(car.rotation.y) * CONSTANTS.ACCELERATION * 0.6 * deltaTime;
-        gameState.velocity.x += Math.sin(car.rotation.y) * CONSTANTS.ACCELERATION * 0.6 * deltaTime;
+        gameState.velocity.x -= Math.sin(car.rotation.y) * CONSTANTS.ACCELERATION * 0.6 * deltaTime;
+        gameState.velocity.z -= Math.cos(car.rotation.y) * CONSTANTS.ACCELERATION * 0.6 * deltaTime;
         moved = true;
     }
-    
-    // Apply rotation
-    if (Math.abs(gameState.velocity.x) > 0.1 || Math.abs(gameState.velocity.z) > 0.1) {
+    // Brake (Space bar)
+    if (input.brake) {
+        gameState.velocity.x *= 0.85;
+        gameState.velocity.z *= 0.85;
+        moved = true;
+    }
+    // Apply rotation (A/D)
+    if ((Math.abs(gameState.velocity.x) > 0.1 || Math.abs(gameState.velocity.z) > 0.1)) {
         if (input.left) {
-            car.rotation.y += CONSTANTS.ROTATION_SPEED * deltaTime * Math.sign(gameState.velocity.z);
+            car.rotation.y += CONSTANTS.ROTATION_SPEED * deltaTime;
             moved = true;
         }
         if (input.right) {
-            car.rotation.y -= CONSTANTS.ROTATION_SPEED * deltaTime * Math.sign(gameState.velocity.z);
+            car.rotation.y -= CONSTANTS.ROTATION_SPEED * deltaTime;
             moved = true;
         }
     }
-    
     // Apply drag
     gameState.velocity.x *= Math.pow(CONSTANTS.DRAG, deltaTime);
     gameState.velocity.z *= Math.pow(CONSTANTS.DRAG, deltaTime);
-    
     // Limit maximum speed
     const speed = Math.sqrt(gameState.velocity.x * gameState.velocity.x + gameState.velocity.z * gameState.velocity.z);
     if (speed > CONSTANTS.MAX_SPEED) {
         gameState.velocity.x = (gameState.velocity.x / speed) * CONSTANTS.MAX_SPEED;
         gameState.velocity.z = (gameState.velocity.z / speed) * CONSTANTS.MAX_SPEED;
     }
-    
     // Apply velocity
     car.position.x += gameState.velocity.x * deltaTime;
     car.position.z += gameState.velocity.z * deltaTime;
-    
+    // --- Boundary check ---
+    if (gameState.boundary !== undefined) {
+        car.position.x = Math.max(-gameState.boundary, Math.min(gameState.boundary, car.position.x));
+        car.position.z = Math.max(-gameState.boundary, Math.min(gameState.boundary, car.position.z));
+    }
     // Keep car on the ground
     car.position.y = 0.5;
-    
     // Update wheel rotation and steering
     updateWheels(deltaTime, moved);
-    
     // Send updates to server
     sendPlayerUpdate(moved);
 }

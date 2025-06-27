@@ -7,7 +7,25 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-container">
+    <div id="login-page" style="display: block;">
+        <h1>Drive Game</h1>
+        <div id="login-form">
+            <input type="email" id="login-email" placeholder="Email" required><br>
+            <input type="password" id="login-password" placeholder="Password" required><br>
+            <button id="login-btn">Sign In</button>
+            <button id="signup-btn">Create Account</button>
+            <div id="login-error" style="color: red; display: none;"></div>
+        </div>
+    </div>
+    <div id="lobby-page" style="display: none;">
+        <h2>Lobby</h2>
+        <div id="lobby-user"></div>
+        <button id="invite-btn">Invite Friends</button>
+        <button id="solo-btn">Start Solo Session</button>
+        <button id="join-btn">Join Random Multiplayer</button>
+        <div id="lobby-error" style="color: red; display: none;"></div>
+    </div>
+    <div id="game-container" style="display: none;">
         <div id="hud">
             <div id="player-count">Players: 1</div>
             <div id="speed">Speed: 0 km/h</div>

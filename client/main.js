@@ -95,10 +95,6 @@ function setupEventListeners() {
     // Start button
     document.getElementById('start-btn').addEventListener('click', startGame);
     
-    // Keyboard input
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
-    
     // Touch controls for mobile
     setupTouchControls();
     
@@ -108,6 +104,10 @@ function setupEventListeners() {
 
 // Handle keyboard input
 function onKeyDown(event) {
+    // Prevent WASD/arrow/space from triggering when typing in input or textarea
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+        return;
+    }
     // Prevent default for game control keys to avoid browser hotkeys
     const controlKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'];
     if (controlKeys.includes(event.code)) {
@@ -1181,3 +1181,78 @@ window.addEventListener('resize', () => {
 
 // Start the game when the page loads
 window.onload = init;
+
+// --- PAGE NAVIGATION & AUTH ---
+function showPage(page) {
+    document.getElementById('login-page').style.display = (page === 'login') ? 'flex' : 'none';
+    document.getElementById('lobby-page').style.display = (page === 'lobby') ? 'flex' : 'none';
+    document.getElementById('game-container').style.display = (page === 'game') ? 'block' : 'none';
+}
+
+function fakeAuth(email, password, isSignup = false) {
+    // For demo: store users in localStorage
+    let users = JSON.parse(localStorage.getItem('users') || '{}');
+    if (isSignup) {
+        if (users[email]) return { error: 'Account already exists.' };
+        users[email] = { password };
+        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.setItem('currentUser', email);
+        return { success: true };
+    } else {
+        if (!users[email] || users[email].password !== password) return { error: 'Invalid credentials.' };
+        localStorage.setItem('currentUser', email);
+        return { success: true };
+    }
+}
+
+function setupLoginAndLobby() {
+    // Login
+    document.getElementById('login-btn').onclick = function() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        const res = fakeAuth(email, password, false);
+        if (res.error) {
+            document.getElementById('login-error').innerText = res.error;
+            document.getElementById('login-error').style.display = 'block';
+        } else {
+            document.getElementById('login-error').style.display = 'none';
+            showPage('lobby');
+            document.getElementById('lobby-user').innerText = `Logged in as: ${email}`;
+        }
+    };
+    // Signup
+    document.getElementById('signup-btn').onclick = function() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        const res = fakeAuth(email, password, true);
+        if (res.error) {
+            document.getElementById('login-error').innerText = res.error;
+            document.getElementById('login-error').style.display = 'block';
+        } else {
+            document.getElementById('login-error').style.display = 'none';
+            showPage('lobby');
+            document.getElementById('lobby-user').innerText = `Logged in as: ${email}`;
+        }
+    };
+    // Lobby buttons
+    document.getElementById('invite-btn').onclick = function() {
+        alert('Invite friends feature coming soon!');
+    };
+    document.getElementById('solo-btn').onclick = function() {
+        showPage('game');
+        // Optionally set solo mode flag
+    };
+    document.getElementById('join-btn').onclick = function() {
+        showPage('game');
+        // Optionally set multiplayer mode flag
+    };
+}
+
+// On load, show login page and set up handlers
+window.addEventListener('DOMContentLoaded', () => {
+    showPage('login');
+    setupLoginAndLobby();
+    // Keyboard input (global)
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+});

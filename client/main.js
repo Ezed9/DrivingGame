@@ -1179,80 +1179,34 @@ window.addEventListener('resize', () => {
     }
 });
 
-// Start the game when the page loads
-window.onload = init;
-
-// --- PAGE NAVIGATION & AUTH ---
-function showPage(page) {
-    document.getElementById('login-page').style.display = (page === 'login') ? 'flex' : 'none';
-    document.getElementById('lobby-page').style.display = (page === 'lobby') ? 'flex' : 'none';
-    document.getElementById('game-container').style.display = (page === 'game') ? 'block' : 'none';
-}
-
-function fakeAuth(email, password, isSignup = false) {
-    // For demo: store users in localStorage
-    let users = JSON.parse(localStorage.getItem('users') || '{}');
-    if (isSignup) {
-        if (users[email]) return { error: 'Account already exists.' };
-        users[email] = { password };
-        localStorage.setItem('users', JSON.stringify(users));
-        localStorage.setItem('currentUser', email);
-        return { success: true };
-    } else {
-        if (!users[email] || users[email].password !== password) return { error: 'Invalid credentials.' };
-        localStorage.setItem('currentUser', email);
-        return { success: true };
-    }
-}
-
-function setupLoginAndLobby() {
-    // Login
-    document.getElementById('login-btn').onclick = function() {
-        const email = document.getElementById('login-email').value.trim();
-        const password = document.getElementById('login-password').value;
-        const res = fakeAuth(email, password, false);
-        if (res.error) {
-            document.getElementById('login-error').innerText = res.error;
-            document.getElementById('login-error').style.display = 'block';
-        } else {
-            document.getElementById('login-error').style.display = 'none';
-            showPage('lobby');
-            document.getElementById('lobby-user').innerText = `Logged in as: ${email}`;
-        }
-    };
-    // Signup
-    document.getElementById('signup-btn').onclick = function() {
-        const email = document.getElementById('login-email').value.trim();
-        const password = document.getElementById('login-password').value;
-        const res = fakeAuth(email, password, true);
-        if (res.error) {
-            document.getElementById('login-error').innerText = res.error;
-            document.getElementById('login-error').style.display = 'block';
-        } else {
-            document.getElementById('login-error').style.display = 'none';
-            showPage('lobby');
-            document.getElementById('lobby-user').innerText = `Logged in as: ${email}`;
-        }
-    };
-    // Lobby buttons
-    document.getElementById('invite-btn').onclick = function() {
-        alert('Invite friends feature coming soon!');
-    };
-    document.getElementById('solo-btn').onclick = function() {
-        showPage('game');
-        // Optionally set solo mode flag
-    };
-    document.getElementById('join-btn').onclick = function() {
-        showPage('game');
-        // Optionally set multiplayer mode flag
-    };
-}
-
-// On load, show login page and set up handlers
+// Show the game container and start screen on load
 window.addEventListener('DOMContentLoaded', () => {
-    showPage('login');
-    setupLoginAndLobby();
+    document.getElementById('game-container').style.display = 'block';
+    document.getElementById('start-screen').style.display = 'flex';
     // Keyboard input (global)
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
+});
+
+// Start the game when the user enters a username and clicks Start Driving
+const startBtn = document.getElementById('start-btn');
+const playerNameInput = document.getElementById('player-name');
+
+startBtn.onclick = function() {
+    const username = playerNameInput.value.trim();
+    if (!username) {
+        playerNameInput.placeholder = 'Please enter your name';
+        playerNameInput.classList.add('input-error');
+        return;
+    }
+    // Set the player's name in gameState
+    gameState.playerName = username;
+    document.getElementById('start-screen').style.display = 'none';
+    init(); // Start the game
+};
+
+playerNameInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        startBtn.click();
+    }
 });
